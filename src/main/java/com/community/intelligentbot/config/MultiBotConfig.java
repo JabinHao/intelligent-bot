@@ -4,6 +4,7 @@ import com.community.intelligentbot.listener.MessageListener;
 import com.community.intelligentbot.service.AssistantService;
 import com.community.intelligentbot.service.ChatHistoryEmbeddingService;
 import com.community.intelligentbot.service.DocumentIngestionService;
+import com.community.intelligentbot.service.tool.DiscordTools;
 import com.community.intelligentbot.service.guardrail.ContentModerationGuardrail;
 import com.community.intelligentbot.service.guardrail.TopicFilterGuardrail;
 import dev.langchain4j.memory.chat.ChatMemoryProvider;
@@ -120,34 +121,38 @@ public class MultiBotConfig {
                 .queryRouter(new DefaultQueryRouter(knowledgeBaseRetriever, chatHistoryRetriever))
                 .build();
 
-        // 5. AssistantService per bot with custom persona
+        // 5. JDA instance per bot (created first so tools can use it)
+        var jda = JDABuilder.createDefault(botConfig.getToken(),
+                        GatewayIntent.GUILD_MESSAGES,
+                        GatewayIntent.DIRECT_MESSAGES,
+                        GatewayIntent.MESSAGE_CONTENT)
+                .build()
+                .awaitReady();
+
+        // 6. Discord tools with JDA access
+        DiscordTools discordTools = new DiscordTools(jda);
+
+        // 7. AssistantService per bot with custom persona and tools
         AssistantService assistantService = AiServices.builder(AssistantService.class)
                 .streamingChatModel(streamingChatModel)
                 .chatMemoryProvider(chatMemoryProvider)
                 .retrievalAugmentor(retrievalAugmentor)
                 .systemMessageProvider(memoryId -> botConfig.getPersona())
                 .inputGuardrails(contentModerationGuardrail, topicFilterGuardrail)
+                .tools(discordTools)
                 .build();
 
-        // 6. Document ingestion service per bot
+        // 8. Document ingestion service per bot
         DocumentIngestionService documentIngestionService = new DocumentIngestionService(embeddingModel, embeddingStore, redisTemplate, botConfig.getId());
         documentIngestionService.loadLocalKnowledge(botConfig.getKnowledgePath());
 
-        // 7. Chat history embedding service per bot
+        // 9. Chat history embedding service per bot
         ChatHistoryEmbeddingService chatHistoryEmbeddingService = new ChatHistoryEmbeddingService(
                 embeddingModel, chatHistoryStore, redisTemplate, botConfig.getId());
 
-        // 8. MessageListener per bot
+        // 10. Register MessageListener after AssistantService is ready
         MessageListener messageListener = new MessageListener(assistantService, botConfig.getId(), chatHistoryEmbeddingService);
-
-        // 9. JDA instance per bot
-        var jda = JDABuilder.createDefault(botConfig.getToken(),
-                        GatewayIntent.GUILD_MESSAGES,
-                        GatewayIntent.DIRECT_MESSAGES,
-                        GatewayIntent.MESSAGE_CONTENT)
-                .addEventListeners(messageListener)
-                .build()
-                .awaitReady();
+        jda.addEventListener(messageListener);
 
         return BotContext.builder()
                 .id(botConfig.getId())
