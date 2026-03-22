@@ -30,6 +30,9 @@ milvus:
   host: 172.30.4.3
   port: 19530
 
+bot:
+  id: ${BOT_ID:gamebot}
+
 discord:
   bot:
     token: ${DISCORD_BOT_TOKEN}

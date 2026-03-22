@@ -23,12 +23,15 @@ public class MilvusConfig {
     @Value("${milvus.port}")
     private int port;
 
+    @Value("${bot.id}")
+    private String botId;
+
     @Bean
     public MilvusEmbeddingStore milvusEmbeddingStore() {
         return MilvusEmbeddingStore.builder()
                 .host(host)
                 .port(port)
-                .collectionName("knowledge_base")
+                .collectionName(botId + "_knowledge_base")
                 .dimension(1024) // text-embedding-v4 output dimension
                 .indexType(IndexType.FLAT)
                 .metricType(MetricType.COSINE)
