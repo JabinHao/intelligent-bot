@@ -32,7 +32,7 @@ milvus:
 
 bots:
   - id: gamebot
-    token: ${GAMEBOT_TOKEN}
+    token: ${DISCORD_BOT_TOKEN}
     persona: |
       You are a game community assistant bot. Your name is GameBot.
       You help players with game-related questions including rules, strategies, guides, patch notes, and community events.

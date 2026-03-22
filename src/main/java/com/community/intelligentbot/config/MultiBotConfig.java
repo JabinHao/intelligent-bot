@@ -25,6 +25,7 @@ import net.dv8tion.jda.api.requests.GatewayIntent;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
+import org.springframework.data.redis.core.StringRedisTemplate;
 
 import java.util.ArrayList;
 import java.util.List;
@@ -41,6 +42,7 @@ public class MultiBotConfig {
     private final ChatMemoryProvider chatMemoryProvider;
     private final ContentModerationGuardrail contentModerationGuardrail;
     private final TopicFilterGuardrail topicFilterGuardrail;
+    private final StringRedisTemplate redisTemplate;
 
     @Value("${milvus.host}")
     private String milvusHost;
@@ -97,7 +99,7 @@ public class MultiBotConfig {
                 .build();
 
         // 4. Document ingestion service per bot
-        DocumentIngestionService documentIngestionService = new DocumentIngestionService(embeddingModel, embeddingStore);
+        DocumentIngestionService documentIngestionService = new DocumentIngestionService(embeddingModel, embeddingStore, redisTemplate, botConfig.getId());
         documentIngestionService.loadLocalKnowledge(botConfig.getKnowledgePath());
 
         // 5. MessageListener per bot
