@@ -41,10 +41,14 @@ public class MessageListener extends ListenerAdapter {
             return;
         }
 
+        // Sandbox memory by context: DM conversations are isolated from guild channels
         String userId = event.getAuthor().getId();
+        String memoryId = isDM
+                ? userId + ":dm"
+                : userId + ":guild:" + event.getGuild().getId();
 
         try {
-            String response = assistantService.chat(userId, userMessage);
+            String response = assistantService.chat(memoryId, userMessage);
             sendResponse(event, response);
         } catch (InputGuardrailException e) {
             event.getChannel().sendMessage(e.getMessage()).queue();
