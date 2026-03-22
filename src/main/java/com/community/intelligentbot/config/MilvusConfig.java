@@ -1,5 +1,8 @@
 package com.community.intelligentbot.config;
 
+import dev.langchain4j.model.embedding.EmbeddingModel;
+import dev.langchain4j.rag.content.retriever.ContentRetriever;
+import dev.langchain4j.rag.content.retriever.EmbeddingStoreContentRetriever;
 import dev.langchain4j.store.embedding.milvus.MilvusEmbeddingStore;
 import io.milvus.common.clientenum.ConsistencyLevelEnum;
 import io.milvus.param.IndexType;
@@ -27,6 +30,16 @@ public class MilvusConfig {
                 .indexType(IndexType.FLAT)
                 .metricType(MetricType.COSINE)
                 .consistencyLevel(ConsistencyLevelEnum.EVENTUALLY)
+                .build();
+    }
+
+    @Bean
+    public ContentRetriever contentRetriever(MilvusEmbeddingStore embeddingStore, EmbeddingModel embeddingModel) {
+        return EmbeddingStoreContentRetriever.builder()
+                .embeddingStore(embeddingStore)
+                .embeddingModel(embeddingModel)
+                .maxResults(5)
+                .minScore(0.7)
                 .build();
     }
 }
