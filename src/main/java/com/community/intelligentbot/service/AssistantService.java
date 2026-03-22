@@ -4,6 +4,7 @@ import com.community.intelligentbot.service.guardrail.ContentModerationGuardrail
 import com.community.intelligentbot.service.guardrail.TopicFilterGuardrail;
 import dev.langchain4j.service.MemoryId;
 import dev.langchain4j.service.SystemMessage;
+import dev.langchain4j.service.TokenStream;
 import dev.langchain4j.service.UserMessage;
 import dev.langchain4j.service.spring.AiService;
 import dev.langchain4j.service.guardrail.InputGuardrails;
@@ -26,5 +27,5 @@ public interface AssistantService {
             - When asked who you are, introduce yourself as GameBot, a game community assistant.
             """)
     @InputGuardrails({ContentModerationGuardrail.class, TopicFilterGuardrail.class})
-    String chat(@MemoryId String memoryId, @UserMessage String userMessage);
+    TokenStream chatStream(@MemoryId String memoryId, @UserMessage String userMessage);
 }
