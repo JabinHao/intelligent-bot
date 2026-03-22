@@ -30,4 +30,16 @@ public class DocumentController {
                 "count", count
         ));
     }
+
+    @PostMapping("/ingest/text")
+    public ResponseEntity<Map<String, String>> ingestText(@RequestBody Map<String, String> request) {
+        String title = request.get("title");
+        String content = request.get("content");
+        if (title == null || title.isBlank() || content == null || content.isBlank()) {
+            return ResponseEntity.badRequest().body(Map.of("error", "title and content are required"));
+        }
+
+        documentIngestionService.ingestText(title, content);
+        return ResponseEntity.ok(Map.of("message", "Text document ingested successfully", "title", title));
+    }
 }

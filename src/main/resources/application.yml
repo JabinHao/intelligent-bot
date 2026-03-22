@@ -29,3 +29,6 @@ milvus:
 discord:
   bot:
     token: ${DISCORD_BOT_TOKEN}
+
+knowledge:
+  local-path: ${KNOWLEDGE_LOCAL_PATH:}
