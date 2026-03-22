@@ -7,23 +7,16 @@ import dev.langchain4j.data.document.splitter.DocumentSplitters;
 import dev.langchain4j.model.embedding.EmbeddingModel;
 import dev.langchain4j.store.embedding.EmbeddingStoreIngestor;
 import dev.langchain4j.store.embedding.milvus.MilvusEmbeddingStore;
-import jakarta.annotation.PostConstruct;
 import lombok.extern.slf4j.Slf4j;
-import org.springframework.beans.factory.annotation.Value;
-import org.springframework.stereotype.Service;
 
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.util.List;
 
 @Slf4j
-@Service
 public class DocumentIngestionService {
 
     private final EmbeddingStoreIngestor ingestor;
-
-    @Value("${knowledge.local-path:}")
-    private String localKnowledgePath;
 
     public DocumentIngestionService(EmbeddingModel embeddingModel, MilvusEmbeddingStore embeddingStore) {
         this.ingestor = EmbeddingStoreIngestor.builder()
@@ -33,21 +26,20 @@ public class DocumentIngestionService {
                 .build();
     }
 
-    @PostConstruct
-    public void loadLocalKnowledge() {
-        if (localKnowledgePath == null || localKnowledgePath.isBlank()) {
+    public void loadLocalKnowledge(String knowledgePath) {
+        if (knowledgePath == null || knowledgePath.isBlank()) {
             return;
         }
-        Path path = Path.of(localKnowledgePath);
+        Path path = Path.of(knowledgePath);
         if (!Files.exists(path) || !Files.isDirectory(path)) {
-            log.warn("Knowledge path does not exist or is not a directory: {}", localKnowledgePath);
+            log.warn("Knowledge path does not exist or is not a directory: {}", knowledgePath);
             return;
         }
         try {
-            int count = ingestFromDirectory(localKnowledgePath);
-            log.info("Loaded {} local knowledge documents from {}", count, localKnowledgePath);
+            int count = ingestFromDirectory(knowledgePath);
+            log.info("Loaded {} local knowledge documents from {}", count, knowledgePath);
         } catch (Exception e) {
-            log.error("Failed to load local knowledge from {}: {}", localKnowledgePath, e.getMessage(), e);
+            log.error("Failed to load local knowledge from {}: {}", knowledgePath, e.getMessage(), e);
         }
     }
 
