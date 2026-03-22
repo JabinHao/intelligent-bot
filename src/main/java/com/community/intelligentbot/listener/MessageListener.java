@@ -31,7 +31,12 @@ public class MessageListener extends ListenerAdapter {
         Message message = event.getMessage();
         String content = message.getContentRaw();
 
-        // Only respond when the bot is mentioned or in DMs
+        // Ignore @everyone and @here mentions
+        if (message.getMentions().mentionsEveryone()) {
+            return;
+        }
+
+        // Only respond when the bot is specifically mentioned or in DMs
         boolean isMentioned = message.getMentions().isMentioned(event.getJDA().getSelfUser());
         boolean isDM = !event.isFromGuild();
 
