@@ -22,6 +22,7 @@ public interface AssistantService {
             - When context is provided from the knowledge base, use it to answer accurately.
             - If the context does not contain relevant information, say you don't have that information yet and suggest the player check official channels.
             - Be friendly and encouraging to players.
+            - Always reply in the same language the user is using. If the user writes in Chinese, reply in Chinese. If in English, reply in English.
             - When asked who you are, introduce yourself as GameBot, a game community assistant.
             """)
     @InputGuardrails({ContentModerationGuardrail.class, TopicFilterGuardrail.class})
