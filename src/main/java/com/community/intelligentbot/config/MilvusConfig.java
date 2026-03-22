@@ -1,8 +1,11 @@
 package com.community.intelligentbot.config;
 
+import dev.langchain4j.model.chat.ChatModel;
 import dev.langchain4j.model.embedding.EmbeddingModel;
-import dev.langchain4j.rag.content.retriever.ContentRetriever;
+import dev.langchain4j.rag.DefaultRetrievalAugmentor;
+import dev.langchain4j.rag.RetrievalAugmentor;
 import dev.langchain4j.rag.content.retriever.EmbeddingStoreContentRetriever;
+import dev.langchain4j.rag.query.transformer.CompressingQueryTransformer;
 import dev.langchain4j.store.embedding.milvus.MilvusEmbeddingStore;
 import io.milvus.common.clientenum.ConsistencyLevelEnum;
 import io.milvus.param.IndexType;
@@ -34,12 +37,23 @@ public class MilvusConfig {
     }
 
     @Bean
-    public ContentRetriever contentRetriever(MilvusEmbeddingStore embeddingStore, EmbeddingModel embeddingModel) {
-        return EmbeddingStoreContentRetriever.builder()
+    public RetrievalAugmentor retrievalAugmentor(MilvusEmbeddingStore embeddingStore,
+                                                  EmbeddingModel embeddingModel,
+                                                  ChatModel chatModel) {
+        EmbeddingStoreContentRetriever contentRetriever = EmbeddingStoreContentRetriever.builder()
                 .embeddingStore(embeddingStore)
                 .embeddingModel(embeddingModel)
                 .maxResults(5)
                 .minScore(0.7)
+                .build();
+
+        CompressingQueryTransformer queryTransformer = CompressingQueryTransformer.builder()
+                .chatModel(chatModel)
+                .build();
+
+        return DefaultRetrievalAugmentor.builder()
+                .queryTransformer(queryTransformer)
+                .contentRetriever(contentRetriever)
                 .build();
     }
 }

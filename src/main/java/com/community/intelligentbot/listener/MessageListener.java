@@ -1,6 +1,7 @@
 package com.community.intelligentbot.listener;
 
 import com.community.intelligentbot.service.AssistantService;
+import dev.langchain4j.guardrail.InputGuardrailException;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import net.dv8tion.jda.api.entities.Message;
@@ -45,6 +46,8 @@ public class MessageListener extends ListenerAdapter {
         try {
             String response = assistantService.chat(userId, userMessage);
             sendResponse(event, response);
+        } catch (InputGuardrailException e) {
+            event.getChannel().sendMessage(e.getMessage()).queue();
         } catch (Exception e) {
             log.error("Error processing message from user {}: {}", userId, e.getMessage(), e);
             event.getChannel().sendMessage("Sorry, something went wrong. Please try again later.").queue();
