@@ -23,7 +23,7 @@ langchain4j:
       base-url: https://dashscope.aliyuncs.com/compatible-mode/v1
 
 milvus:
-  uri: http://172.30.4.3
+  host: 172.30.4.3
   port: 19530
 
 discord:
