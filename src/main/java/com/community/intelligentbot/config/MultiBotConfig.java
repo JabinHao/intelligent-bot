@@ -2,6 +2,7 @@ package com.community.intelligentbot.config;
 
 import com.community.intelligentbot.listener.MessageListener;
 import com.community.intelligentbot.service.AssistantService;
+import com.community.intelligentbot.service.ChatHistoryEmbeddingService;
 import com.community.intelligentbot.service.DocumentIngestionService;
 import com.community.intelligentbot.service.guardrail.ContentModerationGuardrail;
 import com.community.intelligentbot.service.guardrail.TopicFilterGuardrail;
@@ -11,7 +12,9 @@ import dev.langchain4j.model.chat.StreamingChatModel;
 import dev.langchain4j.model.embedding.EmbeddingModel;
 import dev.langchain4j.rag.DefaultRetrievalAugmentor;
 import dev.langchain4j.rag.RetrievalAugmentor;
+import dev.langchain4j.rag.content.retriever.ContentRetriever;
 import dev.langchain4j.rag.content.retriever.EmbeddingStoreContentRetriever;
+import dev.langchain4j.rag.query.router.DefaultQueryRouter;
 import dev.langchain4j.rag.query.transformer.CompressingQueryTransformer;
 import dev.langchain4j.service.AiServices;
 import dev.langchain4j.store.embedding.milvus.MilvusEmbeddingStore;
@@ -76,20 +79,48 @@ public class MultiBotConfig {
                 .consistencyLevel(ConsistencyLevelEnum.EVENTUALLY)
                 .build();
 
-        // 2. Retrieval augmentor with query transformer
+        // 2. Milvus embedding store for chat history per bot
+        MilvusEmbeddingStore chatHistoryStore = MilvusEmbeddingStore.builder()
+                .host(milvusHost)
+                .port(milvusPort)
+                .collectionName(botConfig.getId() + "_chat_history")
+                .dimension(1024)
+                .indexType(IndexType.FLAT)
+                .metricType(MetricType.COSINE)
+                .consistencyLevel(ConsistencyLevelEnum.EVENTUALLY)
+                .build();
+
+        // 3. Content retrievers: knowledge base + chat history
+        ContentRetriever knowledgeBaseRetriever = EmbeddingStoreContentRetriever.builder()
+                .embeddingStore(embeddingStore)
+                .embeddingModel(embeddingModel)
+                .displayName("knowledge-base")
+                .maxResults(5)
+                .minScore(0.7)
+                .build();
+
+        ContentRetriever chatHistoryRetriever = EmbeddingStoreContentRetriever.builder()
+                .embeddingStore(chatHistoryStore)
+                .embeddingModel(embeddingModel)
+                .displayName("chat-history")
+                .maxResults(3)
+                .minScore(0.6)
+                .dynamicFilter(query -> {
+                    String memId = query.metadata().chatMemoryId().toString();
+                    String userId = memId.split(":")[1];
+                    return new dev.langchain4j.store.embedding.filter.comparison.IsEqualTo("userId", userId);
+                })
+                .build();
+
+        // 4. Retrieval augmentor with query transformer and multi-source routing
         RetrievalAugmentor retrievalAugmentor = DefaultRetrievalAugmentor.builder()
                 .queryTransformer(CompressingQueryTransformer.builder()
                         .chatModel(chatModel)
                         .build())
-                .contentRetriever(EmbeddingStoreContentRetriever.builder()
-                        .embeddingStore(embeddingStore)
-                        .embeddingModel(embeddingModel)
-                        .maxResults(5)
-                        .minScore(0.7)
-                        .build())
+                .queryRouter(new DefaultQueryRouter(knowledgeBaseRetriever, chatHistoryRetriever))
                 .build();
 
-        // 3. AssistantService per bot with custom persona
+        // 5. AssistantService per bot with custom persona
         AssistantService assistantService = AiServices.builder(AssistantService.class)
                 .streamingChatModel(streamingChatModel)
                 .chatMemoryProvider(chatMemoryProvider)
@@ -98,14 +129,18 @@ public class MultiBotConfig {
                 .inputGuardrails(contentModerationGuardrail, topicFilterGuardrail)
                 .build();
 
-        // 4. Document ingestion service per bot
+        // 6. Document ingestion service per bot
         DocumentIngestionService documentIngestionService = new DocumentIngestionService(embeddingModel, embeddingStore, redisTemplate, botConfig.getId());
         documentIngestionService.loadLocalKnowledge(botConfig.getKnowledgePath());
 
-        // 5. MessageListener per bot
-        MessageListener messageListener = new MessageListener(assistantService, botConfig.getId());
+        // 7. Chat history embedding service per bot
+        ChatHistoryEmbeddingService chatHistoryEmbeddingService = new ChatHistoryEmbeddingService(
+                embeddingModel, chatHistoryStore, redisTemplate, botConfig.getId());
 
-        // 6. JDA instance per bot
+        // 8. MessageListener per bot
+        MessageListener messageListener = new MessageListener(assistantService, botConfig.getId(), chatHistoryEmbeddingService);
+
+        // 9. JDA instance per bot
         var jda = JDABuilder.createDefault(botConfig.getToken(),
                         GatewayIntent.GUILD_MESSAGES,
                         GatewayIntent.DIRECT_MESSAGES,
@@ -119,6 +154,7 @@ public class MultiBotConfig {
                 .jda(jda)
                 .assistantService(assistantService)
                 .documentIngestionService(documentIngestionService)
+                .chatHistoryEmbeddingService(chatHistoryEmbeddingService)
                 .build();
     }
 }

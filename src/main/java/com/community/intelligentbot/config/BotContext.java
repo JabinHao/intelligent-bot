@@ -1,6 +1,7 @@
 package com.community.intelligentbot.config;
 
 import com.community.intelligentbot.service.AssistantService;
+import com.community.intelligentbot.service.ChatHistoryEmbeddingService;
 import com.community.intelligentbot.service.DocumentIngestionService;
 import lombok.Builder;
 import lombok.Getter;
@@ -14,4 +15,5 @@ public class BotContext {
     private final JDA jda;
     private final AssistantService assistantService;
     private final DocumentIngestionService documentIngestionService;
+    private final ChatHistoryEmbeddingService chatHistoryEmbeddingService;
 }

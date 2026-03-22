@@ -1,12 +1,14 @@
 package com.community.intelligentbot.listener;
 
 import com.community.intelligentbot.service.AssistantService;
+import com.community.intelligentbot.service.ChatHistoryEmbeddingService;
 import dev.langchain4j.guardrail.InputGuardrailException;
 import lombok.extern.slf4j.Slf4j;
 import net.dv8tion.jda.api.entities.Message;
 import net.dv8tion.jda.api.events.message.MessageReceivedEvent;
 import net.dv8tion.jda.api.hooks.ListenerAdapter;
 
+import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.atomic.AtomicLong;
 import java.util.concurrent.atomic.AtomicReference;
 
@@ -18,10 +20,13 @@ public class MessageListener extends ListenerAdapter {
 
     private final AssistantService assistantService;
     private final String botId;
+    private final ChatHistoryEmbeddingService chatHistoryEmbeddingService;
 
-    public MessageListener(AssistantService assistantService, String botId) {
+    public MessageListener(AssistantService assistantService, String botId,
+                           ChatHistoryEmbeddingService chatHistoryEmbeddingService) {
         this.assistantService = assistantService;
         this.botId = botId;
+        this.chatHistoryEmbeddingService = chatHistoryEmbeddingService;
     }
 
     @Override
@@ -108,6 +113,14 @@ public class MessageListener extends ListenerAdapter {
                         sentMessage.get().editMessage(finalText.substring(0, DISCORD_MAX_LENGTH)).queue();
                         sendResponse(event, finalText.substring(DISCORD_MAX_LENGTH));
                     }
+
+                    CompletableFuture.runAsync(() -> {
+                        try {
+                            chatHistoryEmbeddingService.embedConversationTurn(memoryId, userMessage, finalText);
+                        } catch (Exception e) {
+                            log.error("[{}] Failed to embed conversation turn: {}", botId, e.getMessage(), e);
+                        }
+                    });
                 })
                 .onError(error -> {
                     log.error("[{}] Streaming error: {}", botId, error.getMessage(), error);
